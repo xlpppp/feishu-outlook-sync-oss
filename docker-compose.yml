@@ -1,0 +1,19 @@
+services:
+  sync:
+    build: .
+    container_name: feishu-outlook-sync
+    ports:
+      # 宿主机端口:容器内 8000（容器内固定 8000，勿改右侧）
+      - "${HOST_PORT:-18000}:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite:////data/sync.db
+      # 容器内 uvicorn 固定 8000，勿把 HOST_PORT 传进去
+      PORT: "8000"
+    volumes:
+      - sync-data:/data
+    restart: unless-stopped
+
+volumes:
+  sync-data:

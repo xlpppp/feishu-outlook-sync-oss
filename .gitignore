@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+data/
+backup/
+backups/
+backups-host/
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.db
+.DS_Store
+*.zip
+!handoff/*.zip

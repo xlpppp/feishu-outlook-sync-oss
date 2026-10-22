@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}管理后台 · 飞书 ↔ Outlook 同步{% endblock %}
+{% block content %}
+
+<section class="card">
+  <div class="card-head">
+    <h2>管理后台</h2>
+    <a class="link-quiet" href="/">返回首页</a>
+  </div>
+  <p class="muted" style="margin:0 0 1rem">
+    当前管理员：<strong>{{ admin.display_name or admin.feishu_name or admin.feishu_open_id }}</strong>
+    · 解绑仅清除 OAuth Token，不删除用户与事件映射
+  </p>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th class="col-name">显示名</th>
+          <th class="col-openid">飞书 open_id</th>
+          <th class="col-mail">Outlook</th>
+          <th class="col-token">Token</th>
+          <th class="col-sync">同步</th>
+          <th class="col-dir">方向</th>
+          <th class="col-last">最近同步</th>
+          <th class="col-map">映射</th>
+          <th class="col-actions">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set u = row.user %}
+        {% set expanded = expand_user_id == u.id %}
+        <tr class="admin-user-row">
+          <td>{{ u.id }}</td>
+          <td class="cell-ellipsis" title="{{ u.display_name or u.feishu_name or '' }}">{{ u.display_name or u.feishu_name or '—' }}</td>
+          <td class="cell-ellipsis" title="{{ u.feishu_open_id or '' }}"><code>{{ u.feishu_open_id or '—' }}</code></td>
+          <td class="cell-ellipsis" title="{{ u.ms_email or '' }}">{{ u.ms_email or '—' }}</td>
+          <td class="cell-ellipsis" title="飞书 {% if row.feishu_connected %}已连接{% else %}未连接{% endif %} · Outlook {% if row.ms_connected %}已连接{% else %}未连接{% endif %}">
+            飞书 {% if row.feishu_connected %}✓{% else %}✗{% endif %}
+            · Outlook {% if row.ms_connected %}✓{% else %}✗{% endif %}
+          </td>
+          <td>{% if u.sync_enabled %}开{% else %}关{% endif %}</td>
+          <td class="cell-ellipsis" title="{{ u.sync_direction }}"><code>{{ u.sync_direction }}</code></td>
+          <td>
+            <div class="cell-ellipsis" title="{{ u.last_sync_at or '' }}">{% if u.last_sync_at %}{{ u.last_sync_at }}{% else %}—{% endif %}</div>
+            {% if u.last_sync_status %}<div class="muted cell-ellipsis">{{ u.last_sync_status }}</div>{% endif %}
+            {% if u.last_sync_message %}<div class="muted cell-ellipsis" title="{{ u.last_sync_message }}">{{ u.last_sync_message }}</div>{% endif %}
+          </td>
+          <td>{{ row.mapping_count }}</td>
+          <td>
+            <div class="admin-actions">
+              <form method="post" action="/admin/users/{{ u.id }}/sync"
+                onsubmit="return confirm('确认{% if u.sync_enabled %}关闭{% else %}开启{% endif %}用户 #{{ u.id }} 的自动同步？');">
+                {% if u.sync_enabled %}
+                <input type="hidden" name="enabled" value="0"/>
+                <button class="icon-btn admin-icon" type="submit" title="关闭自动同步" aria-label="关闭自动同步">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="6" y="5" width="4" height="14" rx="1"/>
+                    <rect x="14" y="5" width="4" height="14" rx="1"/>
+                  </svg>
+                </button>
+                {% else %}
+                <input type="hidden" name="enabled" value="1"/>
+                <button class="icon-btn admin-icon" type="submit" title="开启自动同步" aria-label="开启自动同步">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 5.5v13l11-6.5z"/>
+                  </svg>
+                </button>
+                {% endif %}
+              </form>
+              <form method="post" action="/admin/users/{{ u.id }}/unbind"
+                onsubmit="return confirm('确认解除用户 #{{ u.id }} 的登录绑定？仅清除 Token，保留用户与映射。');">
+                <button class="icon-btn admin-icon danger" type="submit" title="解除登录绑定" aria-label="解除登录绑定">
+                  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 13a5 5 0 007.07 0l1.41-1.41a5 5 0 00-7.07-7.07L10 5.93"/>
+                    <path d="M14 11a5 5 0 00-7.07 0L5.52 12.41a5 5 0 007.07 7.07L14 18.07"/>
+                    <path d="M4 4l16 16"/>
+                  </svg>
+                </button>
+              </form>
+              {% if expanded %}
+              <a class="icon-btn admin-icon active" href="/admin" title="收起同步记录" aria-label="收起同步记录" aria-expanded="true">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M12 7v5l3 2"/>
+                </svg>
+              </a>
+              {% else %}
+              <a class="icon-btn admin-icon" href="/admin?expand={{ u.id }}" title="查看近 7 天同步记录" aria-label="查看近 7 天同步记录" aria-expanded="false">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M12 7v5l3 2"/>
+                </svg>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% if expanded %}
+        <tr class="admin-expand-row">
+          <td colspan="10">
+            <div class="admin-expand">
+              <h3>近 7 天同步记录</h3>
+              {% if row.recent_runs %}
+              <table class="admin-runs">
+                <thead>
+                  <tr>
+                    <th class="col-time">开始时间</th>
+                    <th class="col-trigger">触发</th>
+                    <th class="col-status">状态</th>
+                    <th class="col-counts">计数</th>
+                    <th>摘要</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for run in row.recent_runs %}
+                  <tr>
+                    <td class="cell-ellipsis" title="{{ run.started_display }}">{{ run.started_display }}</td>
+                    <td>{{ run.trigger_label }}</td>
+                    <td>
+                      {% if run.status == 'ok' %}
+                      <span class="badge ok">成功</span>
+                      {% elif run.status == 'partial' %}
+                      <span class="badge partial">部分</span>
+                      {% else %}
+                      <span class="badge err">失败</span>
+                      {% endif %}
+                    </td>
+                    <td class="cell-ellipsis" title="c={{ run.created_count }} u={{ run.updated_count }} d={{ run.deleted_count }}">
+                      +{{ run.created_count }} / ~{{ run.updated_count }} / −{{ run.deleted_count }}
+                    </td>
+                    <td class="cell-ellipsis" title="{{ run.message or '' }}">{{ run.message or '—' }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <p class="muted" style="margin:0">近 7 天暂无同步记录</p>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+        {% else %}
+        <tr><td colspan="10" class="muted" style="padding:1rem">暂无用户</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

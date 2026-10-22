@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-lang="zh">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#0b1220"/>
+  <title>{% block title %}飞书 ↔ Outlook 同步{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script src="/static/i18n.js"></script>
+</head>
+<body
+  data-outlook-cal="{{ outlook_target_calendar_name | default('Feishu Sync') }}"
+  data-feishu-cal="{{ feishu_target_calendar_name | default('Outlook Sync') }}"
+  data-sync-interval="{{ sync_interval | default(15) }}">
+  <header class="top">
+    <div class="wrap top-inner">
+      <div class="brand">
+        <div class="brand-text">
+          <h1><a href="/" data-i18n="brand.title">飞书 ↔ Outlook 日历同步</a></h1>
+          <p class="sub" data-i18n="brand.sub">每人独立授权 · 可选同步方向 · 防回环专用日历</p>
+        </div>
+      </div>
+      <div class="top-controls" aria-label="Preferences">
+        <div class="lang-dd" id="langDd">
+          <button type="button" class="lang-trigger" id="langTrigger" aria-haspopup="listbox" aria-expanded="false">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M3 12h18M12 3c2.5 2.8 3.8 5.8 3.8 9s-1.3 6.2-3.8 9c-2.5-2.8-3.8-5.8-3.8-9S9.5 5.8 12 3z"/>
+            </svg>
+            <span class="lang-current" id="langCurrent">自动</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul class="lang-menu" id="langMenu" role="listbox" hidden>
+            <li role="option" data-set-lang="auto"><span data-i18n="ctrl.lang.auto">自动</span></li>
+            <li role="option" data-set-lang="zh"><span data-i18n="ctrl.lang.zh">中文</span></li>
+            <li role="option" data-set-lang="en"><span data-i18n="ctrl.lang.en">English</span></li>
+          </ul>
+        </div>
+        <button type="button" class="icon-btn theme-btn" id="themeBtn" data-theme-cycle title="Theme" aria-label="Theme">
+          <svg class="ico theme-ico sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/>
+          </svg>
+          <svg class="ico theme-ico moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 14.5A8.5 8.5 0 1110.5 3a6.8 6.8 0 0010.5 11.5z"/>
+          </svg>
+          <svg class="ico theme-ico auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="14" rx="2"/>
+            <path d="M8 21h8M12 18v3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main class="wrap">
+    {% if flash %}
+    <div class="flash {% if flash_error %}err{% else %}ok{% endif %}" data-flash-raw="{{ flash }}">{{ flash }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="wrap foot">
+    <p data-i18n="footer">同步窗口与间隔由管理员配置。问题请联系部署负责人。</p>
+    <p class="foot-credit" data-i18n="footer.credit">Open source · MIT · Ye Feng / xlpppp</p>
+  </footer>
+</body>
+</html>

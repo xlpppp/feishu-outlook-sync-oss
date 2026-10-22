@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if not user %}
+<section class="card card-welcome">
+  <div class="welcome">
+    <div class="welcome-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+        <path d="M10 17l5-5-5-5M15 12H3"/>
+      </svg>
+    </div>
+    <div>
+      <h2 data-i18n="welcome.title">尚未登录</h2>
+      <p data-i18n="user.empty">先连接 Outlook 或飞书，连接成功后会自动建立本站会话。</p>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <h2 data-i18n="step.connect">连接账户</h2>
+    <span class="card-step" data-i18n="step.n1">步骤 1</span>
+  </div>
+
+  {% if user %}
+  <div class="user-bar">
+    <div><span data-i18n="user.current">当前用户：</span><strong>{{ user.display_name or user.ms_email or user.feishu_name or ('#' ~ user.id) }}</strong></div>
+    <div class="actions" style="gap:.75rem;align-items:center">
+      {% if is_admin %}
+      <a class="btn" href="/admin">管理后台</a>
+      {% endif %}
+      <a class="link-quiet" href="/oauth/logout" data-i18n="user.logout">退出会话</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid">
+    <div class="status-box feishu">
+      <div class="status-top">
+        <div class="provider-icon feishu" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 3.5a3.5 3.5 0 117 0 3.5 3.5 0 01-7 0z"/></svg>
+        </div>
+        <div>
+          <h3 data-i18n="feishu.name">飞书</h3>
+          {% if feishu_connected %}
+          <span class="badge ok" data-i18n="badge.on">已连接</span>
+          {% else %}
+          <span class="badge off" data-i18n="badge.off">未连接</span>
+          {% endif %}
+        </div>
+      </div>
+      <p class="status-meta">
+        {% if feishu_connected %}{{ user.feishu_name or user.feishu_open_id }}{% else %}<span data-i18n="feishu.meta.off">授权后可读 / 写日历</span>{% endif %}
+      </p>
+      <div class="actions">
+        {% if feishu_connected %}
+        <a class="btn danger" href="/oauth/feishu/disconnect" data-i18n="btn.disconnect">断开</a>
+        {% else %}
+        <a class="btn primary" href="/oauth/feishu/start" data-i18n="btn.connect.feishu">连接飞书</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="status-box outlook">
+      <div class="status-top">
+        <div class="provider-icon outlook" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5A2.5 2.5 0 015.5 3H14v8H3V5.5zM14 13h7v5.5A2.5 2.5 0 0118.5 21H14v-8zM3 13h9v8H5.5A2.5 2.5 0 013 18.5V13zm11-2V3h2.5A2.5 2.5 0 0121 5.5V11h-7z"/></svg>
+        </div>
+        <div>
+          <h3 data-i18n="outlook.name">Outlook.com</h3>
+          {% if ms_connected %}
+          <span class="badge ok" data-i18n="badge.on">已连接</span>
+          {% else %}
+          <span class="badge off" data-i18n="badge.off">未连接</span>
+          {% endif %}
+        </div>
+      </div>
+      <p class="status-meta">
+        {% if ms_connected %}{{ user.ms_email or user.ms_oid }}{% else %}<span data-i18n="outlook.meta.off">个人 Microsoft 账户</span>{% endif %}
+      </p>
+      <div class="actions">
+        {% if ms_connected %}
+        <a class="btn danger" href="/oauth/microsoft/disconnect" data-i18n="btn.disconnect">断开</a>
+        {% else %}
+        <a class="btn primary" href="/oauth/microsoft/start" data-i18n="btn.connect.outlook">连接 Outlook</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2 data-i18n="step.direction">同步方向</h2>
+    <span class="card-step" data-i18n="step.n2">步骤 2</span>
+  </div>
+
+  <div class="cal-map">
+    <p><strong data-i18n="map.title">防回环说明</strong>：<span data-i18n="map.intro">写入的目标日历不会再被当作源拉取。</span></p>
+    <ul>
+      <li data-i18n="map.f2o">飞书 → Outlook：源 = 飞书主日历 → 目标 = Outlook「{{ outlook_target_calendar_name }}」</li>
+      <li data-i18n="map.o2f">Outlook → 飞书：源 = Outlook默认日历 → 目标 = 飞书「{{ feishu_target_calendar_name }}」</li>
+      <li data-i18n="map.skip_sub">飞书「订阅」日历默认不同步到 Outlook（仅主日历）</li>
+    </ul>
+  </div>
+
+  <form method="post" action="/api/sync/direction">
+    <ul class="dir-options">
+      <li>
+        <label>
+          <input type="radio" name="sync_direction" value="{{ dir_feishu_to_outlook }}"
+            {% if sync_direction == dir_feishu_to_outlook %}checked{% endif %}
+            {% if not user %}disabled{% endif %}/>
+          <span>
+            <span class="dir-title" data-i18n="dir.f2o.title">飞书 → Outlook</span>
+            <span class="dir-desc" data-i18n="dir.f2o.desc">飞书主日历写入 Outlook「{{ outlook_target_calendar_name }}」（推荐默认）</span>
+          </span>
+        </label>
+      </li>
+      <li>
+        <label>
+          <input type="radio" name="sync_direction" value="{{ dir_outlook_to_feishu }}"
+            {% if sync_direction == dir_outlook_to_feishu %}checked{% endif %}
+            {% if not user %}disabled{% endif %}/>
+          <span>
+            <span class="dir-title" data-i18n="dir.o2f.title">Outlook → 飞书</span>
+            <span class="dir-desc" data-i18n="dir.o2f.desc">Outlook 默认日历写入飞书「{{ feishu_target_calendar_name }}」</span>
+          </span>
+        </label>
+      </li>
+      <li>
+        <label>
+          <input type="radio" name="sync_direction" value="{{ dir_bidirectional }}"
+            {% if sync_direction == dir_bidirectional %}checked{% endif %}
+            {% if not user %}disabled{% endif %}/>
+          <span>
+            <span class="dir-title" data-i18n="dir.bi.title">双向同步</span>
+            <span class="dir-desc" data-i18n="dir.bi.desc">两腿都跑；各自写入独立目标日历，避免回环</span>
+          </span>
+        </label>
+      </li>
+    </ul>
+
+    {% if needs_feishu_write %}
+    <div class="warn-tip" data-i18n="warn.write">
+      当前方向需要飞书日历写权限。若升级前只用只读权限连过飞书，请先断开再重新连接，以授权 calendar:calendar。
+    </div>
+    {% endif %}
+
+    <button class="btn primary" type="submit" {% if not user %}disabled{% endif %} data-i18n="btn.save.dir">保存同步方向</button>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2 data-i18n="step.sync">同步执行</h2>
+    <span class="card-step" data-i18n="step.n3">步骤 3</span>
+  </div>
+
+  {% if user %}
+  <div class="sync-panel">
+    <div class="sync-stats">
+      <div class="stat">
+        <span class="label" data-i18n="stat.dir">当前方向</span>
+        <span class="value" data-i18n-dir="{{ sync_direction }}">
+          {% if sync_direction == dir_outlook_to_feishu %}Outlook → 飞书
+          {% elif sync_direction == dir_bidirectional %}双向
+          {% else %}飞书 → Outlook{% endif %}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label" data-i18n="stat.last">最近同步</span>
+        <span class="value">
+          {% if user.last_sync_at %}
+            {{ user.last_sync_at }}
+          {% else %}
+            <span data-i18n="sync.never">尚未同步</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="label" data-i18n="stat.status">状态</span>
+        <span class="value">
+          {% if user.last_sync_status %}
+            <span class="{% if user.last_sync_status == 'ok' %}ok-text{% else %}err-text{% endif %}">
+              {{ user.last_sync_status }}
+            </span>
+            {% if user.last_sync_message %}<div class="muted" style="font-weight:500;margin-top:.25rem">{{ user.last_sync_message }}</div>{% endif %}
+          {% else %}
+            —
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <p class="muted" style="margin:0" data-i18n="sync.interval">自动同步间隔约 {{ sync_interval }} 分钟（两端已连接且开启自动同步时）。</p>
+
+    <div class="sync-actions">
+      <form method="post" action="/sync/now">
+        <button class="btn primary btn-lg" type="submit" {% if not (ms_connected and feishu_connected) %}disabled{% endif %} data-i18n="btn.sync.now">
+          立即同步
+        </button>
+      </form>
+      <form method="post" action="/api/sync/toggle">
+        {% if user.sync_enabled %}
+        <input type="hidden" name="enabled" value="0"/>
+        <button class="btn ghost" type="submit" data-i18n="btn.auto.off">关闭自动同步</button>
+        {% else %}
+        <input type="hidden" name="enabled" value="1"/>
+        <button class="btn" type="submit" data-i18n="btn.auto.on">开启自动同步</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="muted" style="margin:0" data-i18n="sync.need.login">连接账户后即可手动或自动同步。</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <details class="help">
+    <summary data-i18n="help.title">使用说明</summary>
+    <div class="help-body">
+      <ol>
+        <li data-i18n="help.1">连接 Outlook（个人 Microsoft 账户）并授权日历读写。</li>
+        <li data-i18n="help.2">连接飞书并授权日历（读 + 写；Outlook→飞书 / 双向时需要写权限）。</li>
+        <li data-i18n="help.3">选择同步方向并保存。</li>
+        <li>
+          <span data-i18n="help.4">点击「立即同步」，或等待定时任务。</span>
+          <ul>
+            <li data-i18n="help.4a">飞书 → Outlook：主日历 →「{{ outlook_target_calendar_name }}」</li>
+            <li data-i18n="help.4b">Outlook → 飞书：默认日历 →「{{ feishu_target_calendar_name }}」</li>
+            <li data-i18n="help.4c">双向：两腿都跑，目标日历互不作为源</li>
+          </ul>
+        </li>
+        <li data-i18n="help.5">请勿在目标日历里改日程；请在对应源日历中修改。</li>
+      </ol>
+    </div>
+  </details>
+</section>
+{% endblock %}
