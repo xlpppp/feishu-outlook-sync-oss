@@ -49,6 +49,14 @@
 
 ---
 
+## [2026-10-22]
+
+### Changed
+
+- UI 页脚去掉个人署名（Ye Feng / xlpppp），改为中性项目署名 `feishu-outlook-sync-oss · MIT`；删除已无引用的 `.brand-logo` 样式残留。
+
+---
+
 ## [Unreleased]
 
 （暂无；新变更追加到带日期的章节。）
